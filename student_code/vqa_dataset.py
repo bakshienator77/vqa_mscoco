@@ -1,5 +1,7 @@
 import os
+from sympy import count_ops
 import torch
+import re
 
 from PIL import Image
 from torch.utils.data import Dataset
@@ -45,20 +47,20 @@ class VqaDataset(Dataset):
         # Create the question map if necessary
         if question_word_to_id_map is None:
             ############ 1.6 TODO
-
-
+            sentences = [self._vqa.qqa[id]["question"] for id in self._vqa.getQuesIds()]
+            self.question_word_to_id_map = self._create_id_map(self._create_word_list(sentences), self.question_word_list_length)
             ############
-            raise NotImplementedError()
+            # raise NotImplementedError()
         else:
             self.question_word_to_id_map = question_word_to_id_map
 
         # Create the answer map if necessary
         if answer_to_id_map is None:
             ############ 1.7 TODO
-
-
+            sentences = [self._vqa.qa[id]["multiple_choice_answer"] for id in self._vqa.getQuesIds()]
+            self.answer_to_id_map = self._create_id_map(sentences, self.answer_list_length)
             ############
-            raise NotImplementedError()
+            # raise NotImplementedError()
         else:
             self.answer_to_id_map = answer_to_id_map
 
@@ -73,10 +75,14 @@ class VqaDataset(Dataset):
         """
 
         ############ 1.4 TODO
-
-
+        out = []
+        for sentence in sentences:
+            print("Sentence before the split and depunc: ", sentence)
+            sentence = re.sub(r'[^\w\s]', '', sentence).lower().split(" ")
+            print("Sentence after split, depunc and lower: ", sentence)
+            out.extend(sentence)
         ############
-        raise NotImplementedError()
+        return out
 
 
     def _create_id_map(self, word_list, max_list_length):
@@ -88,12 +94,17 @@ class VqaDataset(Dataset):
         Return:
             A map (dict) from str to id (rank)
         """
-
         ############ 1.5 TODO
-
-
+        unique_list = list(set(word_list))
+        counts = []
+        for word in unique_list:
+            counts.append(word_list.count(word))
+        ref = [x for _, x in sorted(zip(counts, unique_list), reverse=True)][:max_list_length]
+        map_dict = {}
+        for i,x in enumerate(ref):
+            map_dict[x] = i
         ############
-        raise NotImplementedError()
+        return map_dict
 
 
     def __len__(self):
