@@ -1,3 +1,5 @@
+from binascii import a2b_hex
+from numpy import imag
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -31,17 +33,19 @@ class QuestionFeatureExtractor(nn.Module):
         """
         # word level
         Qw = torch.tanh(self.embedding_layer(Q))
-        Qw = self.dropout(Qw)
+        Qw = self.dropout(Qw) # B x T x E
 
         # phrase level
-        Qw_bet = Qw.permute(0, 2, 1)
-        Qp1 = self.phrase_unigram_layer(Qw_bet)
+        Qw_bet = Qw.permute(0, 2, 1) # B x E x T
+        Qp1 = self.phrase_unigram_layer(Qw_bet) # B x E x Tish
+        print("shape of Qp1 is: ", Qp1.shape)
         Qp2 = self.phrase_bigram_layer(Qw_bet)[:, :, 1:]
         Qp3 = self.phrase_trigramm_layer(Qw_bet)
         Qp = torch.stack([Qp1, Qp2, Qp3], dim=-1)
-        Qp, _ = torch.max(Qp, dim=-1)
+        Qp, _ = torch.max(Qp, dim=-1) # B x E
+        print("phrase level embedding size (B x E)?: ", Qp.shape)
         Qp = torch.tanh(Qp).permute(0, 2, 1)
-        Qp = self.dropout(Qp)
+        Qp = self.dropout(Qp) # B x T x E
 
         # sentence level
         Qs, (_, _) = self.lstm(Qp)
@@ -81,7 +85,7 @@ class AlternatingCoAttention(nn.Module):
             vhat: attended image feature in a shape of Bxk
         """
         B = Q.shape[0]
-
+        # print("Q shape: ", Q.shape, "V shape: ", V.shape)
         # 1st step
         H = torch.tanh(self.Wx1(Q))
         H = self.dropout(H)
@@ -107,37 +111,58 @@ class CoattentionNet(nn.Module):
     Predicts an answer to a question about an image using the Hierarchical Question-Image Co-Attention
     for Visual Question Answering (Lu et al, 2017) paper.
     """
-    def __init__(self):
+    def __init__(self, word_inp_size, embeddind_size, answers_list_length):
         super().__init__()
         ############ 3.3 TODO
-        self.ques_feat_layer = None
+        self.ques_feat_layer = QuestionFeatureExtractor(word_inp_size, embeddind_size)
 
-        self.word_attention_layer = None
-        self.word_attention_layer = None
-        self.word_attention_layer = None
+        self.word_attention_layer = AlternatingCoAttention(d=embeddind_size, k=embeddind_size)
+        # self.word_attention_layer = AlternatingCoAttention(d=embeddind_size)
+        # self.word_attention_layer = AlternatingCoAttention(d=embeddind_size)
 
-        self.Ww = None
-        self.Wp = None
-        self.Ws = None
+        self.Ww = nn.Sequential(
+            nn.Linear(embeddind_size, embeddind_size),
+            nn.Tanh()
+        )
+        self.Wp = nn.Sequential(
+            nn.Linear(2*embeddind_size, embeddind_size),
+            nn.Tanh()
+        )
+        self.Ws = nn.Sequential(
+            nn.Linear(2*embeddind_size, embeddind_size),
+            nn.Tanh()
+        )
 
-        self.dropout = None # please refer to the paper about when you should use dropout
+        self.dropout = nn.Dropout(0.5) # please refer to the paper about when you should use dropout
 
-        self.classifier = None
+        self.classifier = nn.Linear(embeddind_size, answers_list_length)
         ############ 
 
     def forward(self, image_feat, question_encoding):
         ############ 3.3 TODO
         # 1. extract hierarchical question
-        pass
+        Qw, Qp, Qs = self.ques_feat_layer(question_encoding)
     
         # 2. Perform attention between image feature and question feature in each hierarchical layer
-        pass
+        # pass
+        image_feat = image_feat.reshape(image_feat.shape[0], image_feat.shape[1], -1).permute((0,2,1))
+        qhatw, vhatw = self.word_attention_layer(Qw, image_feat)
+        qhatp, vhatp = self.word_attention_layer(Qp, image_feat)
+        qhats, vhats = self.word_attention_layer(Qs, image_feat)
         
         # 3. fuse the attended features
-        pass
+        # pass
+        hw = self.dropout(self.Ww(qhatw + vhatw))
+        print("hw size should be (B x k (512))is: ", hw.shape)
+        concat1 = torch.cat([qhatp+vhatp, hw], dim=1)
+        print("after concat input to Wp layer is size: ", concat1.shape)
+        hp = self.dropout(self.Wp(concat1))
+        print("hp size should be (B x k (512))is: ", hw.shape)
+        hs = self.dropout(self.Wp(torch.cat([qhats+vhats, hp], dim=1)))
         
         # 4. predict the final answer using the fused feature
-        pass
-
+        # pass
+        p = self.classifier(hs)
         ############ 
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        return p
