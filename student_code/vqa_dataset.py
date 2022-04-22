@@ -174,7 +174,7 @@ class VqaDataset(Dataset):
             else: 
                 tf = torchvision.transforms.ToTensor()
                 image = tf(image).unsqueeze(0)
-                print(torch.max(image), torch.min(image))
+                # print(torch.max(image), torch.min(image))
             ############
             # raise NotImplementedError()
 

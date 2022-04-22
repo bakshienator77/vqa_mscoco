@@ -68,7 +68,7 @@ class CoattentionNetExperimentRunner(ExperimentRunnerBase):
 
         ############ 3.4 TODO: set up optimizer
         self.model_type = "coattention"
-        self.optimizer = torch.optim.RMSprop(self._model.parameters(), lr=lr, momentum=0.99, weight_decay=1e-8)
+        self.optimizer = torch.optim.Adam(self._model.parameters(), lr=lr, weight_decay=1e-8)
         ############ 
 
     def _optimize(self, predicted_answers, true_answer_ids):

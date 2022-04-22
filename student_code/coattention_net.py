@@ -38,12 +38,12 @@ class QuestionFeatureExtractor(nn.Module):
         # phrase level
         Qw_bet = Qw.permute(0, 2, 1) # B x E x T
         Qp1 = self.phrase_unigram_layer(Qw_bet) # B x E x Tish
-        print("shape of Qp1 is: ", Qp1.shape)
+        # print("shape of Qp1 is: ", Qp1.shape)
         Qp2 = self.phrase_bigram_layer(Qw_bet)[:, :, 1:]
         Qp3 = self.phrase_trigramm_layer(Qw_bet)
         Qp = torch.stack([Qp1, Qp2, Qp3], dim=-1)
         Qp, _ = torch.max(Qp, dim=-1) # B x E
-        print("phrase level embedding size (B x E)?: ", Qp.shape)
+        # print("phrase level embedding size (B x E)?: ", Qp.shape)
         Qp = torch.tanh(Qp).permute(0, 2, 1)
         Qp = self.dropout(Qp) # B x T x E
 
@@ -153,11 +153,11 @@ class CoattentionNet(nn.Module):
         # 3. fuse the attended features
         # pass
         hw = self.dropout(self.Ww(qhatw + vhatw))
-        print("hw size should be (B x k (512))is: ", hw.shape)
+        # print("hw size should be (B x k (512))is: ", hw.shape)
         concat1 = torch.cat([qhatp+vhatp, hw], dim=1)
-        print("after concat input to Wp layer is size: ", concat1.shape)
+        # print("after concat input to Wp layer is size: ", concat1.shape)
         hp = self.dropout(self.Wp(concat1))
-        print("hp size should be (B x k (512))is: ", hw.shape)
+        # print("hp size should be (B x k (512))is: ", hw.shape)
         hs = self.dropout(self.Wp(torch.cat([qhats+vhats, hp], dim=1)))
         
         # 4. predict the final answer using the fused feature

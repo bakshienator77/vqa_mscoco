@@ -7,6 +7,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import os
 
+from PIL import Image
+
 def save_checkpoint(epoch, model, val_acc, model_type, best=False):
     if best:
         path = os.path.join("./checkpoints", 'best_model_{}.pt'.format(model_type))
@@ -55,7 +57,7 @@ class ExperimentRunnerBase(object):
         self._model.eval()
         losses = []
         accuracy = []
-        test_idx = 4
+        test_idx = 0
         # print("VALIDATION LOOP TIMING: ")
         for batch_id, batch_data in tqdm(enumerate(self._val_dataset_loader)):
             if self._cuda:
@@ -70,29 +72,38 @@ class ExperimentRunnerBase(object):
             be_binary = (torch.argmax(prod_scores, dim=-1) == torch.argmax(predicted_answer, dim=-1)).reshape(-1)
             # print("VALIDATE FUNCTION, be binary shape should be batch_size: ", be_binary.shape)
             accuracy.extend(be_binary.cpu().detach().tolist())
-            if batch_id == 1:
+            if batch_id == 5:
                 invTrans = transforms.Compose([ transforms.Normalize(mean = [ 0., 0., 0. ],
                                                                     std = [ 1/0.229, 1/0.224, 1/0.225 ]),
                                                 transforms.Normalize(mean = [ -0.485, -0.456, -0.406 ],
                                                                         std = [ 1., 1., 1. ]),
                                ])
-                print("IMAGE ID IS: ", self._val_dataset_loader.dataset._vqa.qqa[self.getQuesIds[batch_data["idx"][test_idx]]]["image_id"])
-                self.writer.add_image("Image/test", invTrans(batch_data["image"][test_idx]), epoch)
-                self.writer.add_text("Question/test", 
-                self._val_dataset_loader.dataset._vqa.qqa[self.getQuesIds[batch_data["idx"][test_idx]]]["question"],
-                epoch)
+                # print("IMAGE ID IS: ", )
+                image_id = self._val_dataset_loader.dataset._vqa.qqa[self.getQuesIds[batch_data["idx"][test_idx]]]["image_id"]
+                image_path = os.path.join(self._val_dataset_loader.dataset._image_dir, 
+                            self._val_dataset_loader.dataset._image_filename_pattern.format(image_id))
+                image = Image.open(image_path).convert('RGB')
+                tf = transforms.ToTensor()
+                image = tf(image)
+                # image = 
+                question_text = self._val_dataset_loader.dataset._vqa.qqa[self.getQuesIds[batch_data["idx"][test_idx]]]["question"]
+                # self.writer.add_text("Question/test", 
+                # self._val_dataset_loader.dataset._vqa.qqa[self.getQuesIds[batch_data["idx"][test_idx]]]["question"],
+                # epoch)
                 should_have_the_answers = self._val_dataset_loader.dataset._vqa.qa[self.getQuesIds[batch_data["idx"][test_idx]]]
                 answers = should_have_the_answers["answers"]
                 # print("answers are: ", answers)
-                class_winner = torch.argmax(prod_scores[test_idx])
-                idx_of_interest = torch.argmax(ground_truth_answer[test_idx, :, class_winner]) 
+                class_winner = torch.argmax(predicted_answer[test_idx])
+                # idx_of_interest = torch.argmax(ground_truth_answer[test_idx, :, class_winner])
+                pred_ans_text = list(self._val_dataset_loader.dataset.answer_to_id_map.keys())[list(self._val_dataset_loader.dataset.answer_to_id_map.values()).index(class_winner)] 
                 # print("Index of interest is: ", idx_of_interest)
-                answer = answers[idx_of_interest]["answer"]
-                self.writer.add_text("Answer/predicted", answer, epoch)
+                # answer = answers[idx_of_interest]["answer"]
+                # self.writer.add_text("Answer/predicted", answer, epoch)
                 class_winner = torch.argmax(torch.sum(ground_truth_answer[test_idx], dim=0))
                 idx_of_interest = torch.argmax(ground_truth_answer[test_idx, :, class_winner])
                 answer = answers[idx_of_interest]["answer"]
-                self.writer.add_text("Answer/ground_truth", answer, epoch)
+                # self.writer.add_text("Answer/ground_truth", answer, epoch)
+                self.writer.add_image("Image/Question: {}, GT: {}, Pred: {}".format(question_text, answer, pred_ans_text), image, epoch)
 
             if batch_id == 10 and not full:
                 break
@@ -144,8 +155,8 @@ class ExperimentRunnerBase(object):
                         print("Saving Best Model")
                         best = val_accuracy
                         save_checkpoint(current_step, self._model, val_accuracy, self.model_type, best=True)
-                    else: 
-                        save_checkpoint(current_step, self._model, val_accuracy, self.model_type)
+                    # else: 
+                    save_checkpoint(current_step, self._model, val_accuracy, self.model_type)
                     ############ 2.9 TODO
                     # you probably want to plot something here
                     self.writer.add_scalar('Accuracy/test', val_accuracy, current_step)
