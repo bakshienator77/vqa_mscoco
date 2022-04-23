@@ -166,3 +166,39 @@ class CoattentionNet(nn.Module):
         ############ 
         # raise NotImplementedError()
         return p
+
+
+class CoattentionNetSentenceOnly(CoattentionNet):
+    def __init__(self, word_inp_size, embedding_size, dropout=0.5):
+
+        super().__init__(word_inp_size, embedding_size, dropout)
+    
+    def forward(self, image_feat, question_encoding):
+        # 1. extract hierarchical question
+        # print("YOU ARE ONLY USING SENTENCES")
+        Qw, Qp, Qs = self.ques_feat_layer(question_encoding)
+    
+        # 2. Perform attention between image feature and question feature in each hierarchical layer
+        # pass
+        image_feat = image_feat.reshape(image_feat.shape[0], image_feat.shape[1], -1).permute((0,2,1))
+        # qhatw, vhatw = self.word_attention_layer(Qw, image_feat)
+        # qhatp, vhatp = self.word_attention_layer(Qp, image_feat)
+        qhats, vhats = self.word_attention_layer(Qs, image_feat)
+        
+        # 3. fuse the attended features
+        # pass
+        # hw = self.dropout(self.Ww(qhatw + vhatw))
+        hs = self.dropout(self.Ww(qhats + vhats))
+        # # print("hw size should be (B x k (512))is: ", hw.shape)
+        # concat1 = torch.cat([qhatp+vhatp, hw], dim=1)
+        # # print("after concat input to Wp layer is size: ", concat1.shape)
+        # hp = self.dropout(self.Wp(concat1))
+        # # print("hp size should be (B x k (512))is: ", hw.shape)
+        # hs = self.dropout(self.Wp(torch.cat([qhats+vhats, hp], dim=1)))
+        
+        # 4. predict the final answer using the fused feature
+        # pass
+        p = self.classifier(hs)
+        ############ 
+        # raise NotImplementedError()
+        return p

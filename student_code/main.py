@@ -2,14 +2,14 @@ import argparse
 
 from cv2 import cuda_BufferPool
 from student_code.simple_baseline_experiment_runner import SimpleBaselineExperimentRunner
-from student_code.coattention_experiment_runner import CoattentionNetExperimentRunner
+from student_code.coattention_experiment_runner import CoattentionNetExperimentRunnerSentence, CoattentionNetExperimentRunner
 import os
 import torch
 
 if __name__ == "__main__":
     # Feel free to add more args, or change/remove these.
     parser = argparse.ArgumentParser(description='Load VQA.')
-    parser.add_argument('--model', type=str, choices=['simple', 'coattention'], default='simple')
+    parser.add_argument('--model', type=str, choices=['simple', 'coattention', 'coattentionsentence'], default='simple')
     parser.add_argument('--train_image_dir', type=str)
     parser.add_argument('--train_question_path', type=str)
     parser.add_argument('--train_annotation_path', type=str)
@@ -24,13 +24,14 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=4e-4)
     parser.add_argument('--log_validation', action='store_true')
     parser.add_argument('--eval_mode', action='store_true')
+    parser.add_argument('--sentence_only', action='store_true')
     parser.add_argument('--load_checkpoint', type=str, default='')
 
     args = parser.parse_args()
 
     if args.model == "simple":
         experiment_runner_class = SimpleBaselineExperimentRunner
-    elif args.model == "coattention":
+    elif "coattention" in args.model:
         experiment_runner_class = CoattentionNetExperimentRunner
     else:
         raise ModuleNotFoundError()
@@ -53,7 +54,8 @@ if __name__ == "__main__":
                                                 num_data_loader_workers=args.num_data_loader_workers,
                                                 cache_location=args.cache_location,
                                                 lr=args.lr,
-                                                log_validation=args.log_validation)
+                                                log_validation=args.log_validation,
+                                                sentence_only=args.sentence_only)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
