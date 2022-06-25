@@ -114,6 +114,7 @@ class CoattentionNet(nn.Module):
     def __init__(self, word_inp_size, embeddind_size, answers_list_length):
         super().__init__()
         ############ 3.3 TODO
+<<<<<<< HEAD
         self.ques_feat_layer = QuestionFeatureExtractor(word_inp_size, embeddind_size)
 
         self.word_attention_layer = AlternatingCoAttention(d=embeddind_size, k=embeddind_size)
@@ -136,6 +137,21 @@ class CoattentionNet(nn.Module):
         self.dropout = nn.Dropout(0.5) # please refer to the paper about when you should use dropout
 
         self.classifier = nn.Linear(embeddind_size, answers_list_length)
+=======
+        self.ques_feat_layer = None
+
+        self.word_attention_layer = None
+        self.phrase_attention = None
+        self.question_attention = None
+
+        self.Ww = None
+        self.Wp = None
+        self.Ws = None
+
+        self.dropout = None # please refer to the paper about when you should use dropout
+
+        self.classifier = None
+>>>>>>> 392fef898293fd8844e295ed0c8b4d8ff8751e21
         ############ 
 
     def forward(self, image_feat, question_encoding):
